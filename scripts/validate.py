@@ -7,12 +7,22 @@ Usage:
 Validates that a repo satisfies the contract before an agent claims "complete".
 Exit 0 = pass (warnings allowed), 1 = one or more failures, 2 = usage error.
 
+PROFILES ARE LEAN-FIRST. The default (`library`) minimum is a small core that is
+cheap to maintain and unlikely to rot:
+    README, AGENTS, CLAUDE, TODO, project.yaml, docs/INDEX, docs/REQUIREMENTS,
+    docs/BOUNDARIES.
+Deployed profiles (service/web-application/monorepo/regulated-system) add the
+justified extras: CONTRIBUTING, SECURITY, OPERATIONS, THREAT_MODEL,
+ARCHITECTURE, TESTING, and at least one ADR. DESIGN/FEATURES/GLOSSARY and the
+decisions/plans/ trees remain OPT-IN — present when you actually want them,
+never demanded. The validator checks them only when the files exist.
+
 Checks:
   - profile-required documents exist and have a non-trivial body
-  - project.yaml exists and parses as YAML (if PyYAML installed) / JSON-ish
-  - ID prefix conventions hold and IDs owned by their owning file only
-  - internal `docs/` markdown links resolve to files
-  - each Accepted requirement has "Acceptance criteria" + a "Verification" ref
+  - project.yaml exists and parses as YAML (if PyYAML installed) / light parse
+  - ID prefix ownership is respected and no ID is defined twice
+  - internal `docs/` markdown links resolve
+  - each Accepted requirement has acceptance criteria + verification
   - each Implemented feature references a requirement and a test path
   - AGENTS.md command lines reference real commands (best-effort)
   - no committed .env with real-looking secrets
@@ -29,20 +39,25 @@ from pathlib import Path
 FAILURES: list[str] = []
 WARNINGS: list[str] = []
 
-REQUIRED_EVERY = [
-    "README.md", "AGENTS.md", "CLAUDE.md", "TODO.md", "project.yaml",
-    "docs/INDEX.md", "docs/REQUIREMENTS.md", "docs/FEATURES.md",
-    "docs/DESIGN.md", "docs/BOUNDARIES.md", "docs/ARCHITECTURE.md",
-    "docs/TESTING.md", "docs/GLOSSARY.md",
-    "docs/decisions/README.md", "docs/plans/README.md",
+# Lean core required for EVERY profile.
+# AGENTS.md is the SINGLE canonical control file: Hermes, Codex, GitHub Copilot,
+# and Claude Code all read it directly. No CLAUDE.md shim is maintained.
+CORE = [
+    "README.md", "AGENTS.md", "TODO.md", "project.yaml",
+    "docs/INDEX.md", "docs/REQUIREMENTS.md", "docs/BOUNDARIES.md",
 ]
-PROFILE_EXTRA = {
-    "library": [],
-    "service": ["docs/OPERATIONS.md", "docs/THREAT_MODEL.md"],
-    "web-application": ["docs/OPERATIONS.md", "docs/THREAT_MODEL.md"],
-    "monorepo": ["docs/OPERATIONS.md", "docs/THREAT_MODEL.md"],
-    "regulated-system": ["docs/OPERATIONS.md", "docs/THREAT_MODEL.md"],
+# Justified extras for deployed profiles (deploy + security + as-built + tests).
+DEPLOYED = ["CONTRIBUTING.md", "SECURITY.md", "docs/OPERATIONS.md",
+            "docs/THREAT_MODEL.md", "docs/ARCHITECTURE.md", "docs/TESTING.md"]
+PROFILE_FILES = {
+    "library": CORE,
+    "service": CORE + DEPLOYED,
+    "web-application": CORE + DEPLOYED,
+    "monorepo": CORE + DEPLOYED,
+    "regulated-system": CORE + DEPLOYED,
 }
+# ADR required only for deployed profiles.
+ADRS_REQUIRED = {"service", "web-application", "monorepo", "regulated-system"}
 
 
 def fail(msg: str) -> None:
@@ -60,45 +75,46 @@ def loaded_yaml(path: Path):
     (required top-level keys present). Returns False only when the file is
     genuinely unparsable by the available means.
     """
-    required_keys = ["schema_version", "profile", "documents", "commands"]
     try:
         import yaml  # noqa: F401
         data = yaml.safe_load(path.read_text())
         return isinstance(data, dict) and "profile" in data
     except Exception:
         pass
-    # Light fallback: confirm the key top-level fields appear as `key:` lines.
+    # Light fallback: confirm the load-bearing key appears as a `key:` line.
     text = path.read_text()
     present = set(re.findall(r"^([a-z_]+):", text, re.M))
-    return required_keys[1] in present  # 'profile' is the load-bearing key
+    return "profile" in present
 
 
 def body_non_trivial(path: Path) -> bool:
     if not path.exists():
         return False
+    # CLAUDE.md is legitimately a one-line `@AGENTS.md` shim; never warn on it.
+    if path.name == "CLAUDE.md":
+        return True
     text = path.read_text()
     content = re.sub(r"[#`|>*\[\]\-()\s]", "", text)
     return len(content) > 200
 
 
 def check_required_files(root: Path, profile: str) -> None:
-    required = REQUIRED_EVERY + PROFILE_EXTRA.get(profile, [])
-    for rel in required:
+    for rel in PROFILE_FILES.get(profile, PROFILE_FILES["library"]):
         p = root / rel
         if not p.exists():
-            fail(f"missing required file: {rel}")
+            fail(f"missing required {profile} file: {rel}")
         elif not body_non_trivial(p):
             warn(f"file may be placeholder/empty: {rel}")
-    decisions = root / "docs" / "decisions"
-    adrs = list(decisions.glob("ADR-*.md")) if decisions.exists() else []
-    if not adrs:
-        fail("no ADR files found under docs/decisions/ (need >= 1)")
+    if profile in ADRS_REQUIRED:
+        decisions = root / "docs" / "decisions"
+        adrs = list(decisions.glob("ADR-*.md")) if decisions.exists() else []
+        if not adrs:
+            fail(f"profile '{profile}' requires >= 1 ADR under docs/decisions/")
 
 
 def check_id_uniqueness(root: Path) -> None:
     # An ID may only be *defined* by the file that owns its prefix. Occurrences
-    # of an ID in other files (FEATURES referencing REQ-*, TESTING referencing
-    # REQ-*, ADRs, plans) are legitimate references, not duplicate definitions.
+    # of an ID in other files are legitimate references, not duplicate defs.
     owner = {
         "REQ": root / "docs" / "REQUIREMENTS.md",
         "FTR": root / "docs" / "FEATURES.md",
@@ -112,14 +128,12 @@ def check_id_uniqueness(root: Path) -> None:
             for ident in set(defined):
                 if defined.count(ident) > 1:
                     fail(f"{ident} defined more than once in {owner_path}")
-        elif owner_path.is_dir():
+        elif owner_path.is_dir() and prefix == "ADR":
             defined = set()
             for p in owner_path.glob("ADR-*.md"):
                 m = re.match(r"ADR-(\d+)", p.name)
-                if m:
-                    ident = "ADR-" + m.group(1)
-                else:
-                    # fall back to body header if filename lacks number
+                ident = ("ADR-" + m.group(1)) if m else None
+                if ident is None:
                     h = header.search(p.read_text(errors="ignore"))
                     ident = h.group(1) if h else None
                 if ident and ident in defined:
@@ -206,12 +220,15 @@ def check_secrets(root: Path) -> None:
 
 
 def check_control_plane(root: Path, profile: str) -> None:
-    plane = ["AGENTS.md", "CLAUDE.md", "project.yaml", "docs/BOUNDARIES.md"]
-    if profile in ("service", "web-application", "monorepo", "regulated-system"):
+    plane = ["AGENTS.md", "project.yaml", "docs/BOUNDARIES.md"]
+    if profile in PROFILES - {"library"}:
         plane.append("docs/THREAT_MODEL.md")
     for rel in plane:
         if not (root / rel).exists():
             fail(f"control-plane file missing: {rel}")
+
+
+PROFILES = set(PROFILE_FILES)
 
 
 def main() -> int:
@@ -219,10 +236,13 @@ def main() -> int:
         print("usage: validate.py <project_root> [--profile <p>]")
         return 2
     root = Path(sys.argv[1]).expanduser().resolve()
-    profile = "web-application"
+    profile = "library"
     if "--profile" in sys.argv:
         i = sys.argv.index("--profile")
         profile = sys.argv[i + 1] if i + 1 < len(sys.argv) else profile
+    if profile not in PROFILES:
+        print(f"unknown profile '{profile}'; using library (lean)")
+        profile = "library"
 
     if not root.exists():
         fail(f"project root does not exist: {root}")

@@ -78,40 +78,55 @@ BOUNDARIES > REQUIREMENTS > ADRs (status Accepted) > DESIGN > ARCHITECTURE > TOD
 
 ## 5. Document requirements (per profile)
 
+Core = always present. Deployed = `service`/`web-application`/`monorepo`/
+`regulated-system`. Opt-in = only when the project wants it.
+
 | File                    | Profile set           | Minimum content                                   |
 | ----------------------- | --------------------- | ------------------------------------------------- |
-| `README.md`             | all                   | what it is, how to run it, status                 |
-| `AGENTS.md`             | all                   | project, authority order, workflow, hard rules, commands, DoD |
-| `CLAUDE.md`             | all                   | `@AGENTS.md` import (+ Claude notes)              |
-| `TODO.md`               | all                   | generated active-work view                        |
-| `project.yaml`          | all                   | schema_version, profile, documents, commands, plan_required, protected_control_plane |
-| `docs/INDEX.md`         | all                   | question → document table                         |
-| `docs/REQUIREMENTS.md`  | all                   | `REQ-*` blocks with Status/Priority/AC/Verification |
-| `docs/FEATURES.md`      | all                   | `FTR-*` rows linking to reqs, design, impl, tests |
-| `docs/DESIGN.md`        | all                   | journeys, API semantics, state, errors, concepts  |
-| `docs/BOUNDARIES.md`    | all                   | `BOUNDARY-*` invariants                            |
-| `docs/ARCHITECTURE.md`  | all                   | as-built system                                   |
-| `docs/TESTING.md`       | all                   | strategy mapped to `REQ-*`                        |
-| `docs/GLOSSARY.md`      | all                   | shared domain terms                               |
-| `docs/decisions/`       | all (≥1 ADR)          | ADR entries (Status/Context/Decision/Consequences)|
-| `docs/plans/`           | all                   | ExecPlan format + active/completed dirs           |
-| `docs/OPERATIONS.md`    | service, web-application, monorepo, regulated-system | deploy, observe, recover, rollback |
-| `docs/THREAT_MODEL.md`  | service, web-application, monorepo, regulated-system | assets, trust boundaries, threats, failure modes |
-| `CONTRIBUTING.md`       | service+, monorepo, regulated-system | dev workflow, DoD                   |
-| `SECURITY.md`           | service+, monorepo, regulated-system | vulnerability reporting policy     |
+| `README.md`             | core                  | what it is, how to run it, status                 |
+| `AGENTS.md`             | core                  | project, authority order, workflow, hard rules, commands, DoD |
+| `TODO.md`               | core                  | generated active-work view                        |
+| `project.yaml`          | core                  | schema_version, profile, documents, commands, plan_required, protected_control_plane |
+| `docs/INDEX.md`         | core                  | question → document table                         |
+| `docs/REQUIREMENTS.md`  | core                  | `REQ-*` blocks with Status/Priority/AC/Verification |
+| `docs/BOUNDARIES.md`    | core                  | `BOUNDARY-*` invariants                            |
+| `docs/FEATURES.md`      | opt-in                | `FTR-*` rows linking to reqs, design, impl, tests |
+| `docs/DESIGN.md`        | opt-in                | journeys, API semantics, state, errors, concepts  |
+| `docs/ARCHITECTURE.md`  | deployed              | as-built system                                   |
+| `docs/TESTING.md`       | deployed              | strategy mapped to `REQ-*`                        |
+| `docs/decisions/`       | deployed (≥1 ADR); opt-in for library | ADR entries (Status/Context/Decision/Consequences) |
+| `docs/plans/`           | opt-in                | ExecPlan format + active/completed dirs           |
+| `docs/OPERATIONS.md`    | deployed              | deploy, observe, recover, rollback                |
+| `docs/THREAT_MODEL.md`  | deployed              | assets, trust boundaries, threats, failure modes  |
+| `docs/GLOSSARY.md`      | opt-in                | shared domain terms                               |
+| `CONTRIBUTING.md`       | deployed              | dev workflow, DoD                                 |
+| `SECURITY.md`           | deployed              | vulnerability reporting policy                    |
 | `.env.example`          | web-application       | schema only, no real secrets                     |
 | nested `AGENTS.md`      | monorepo              | per-package deltas only                          |
 | `BASELINE.md`           | regulated-system      | validation evidence, approval checklist          |
 
+No `CLAUDE.md` in any profile: `AGENTS.md` is the single canonical control
+file, read directly by Hermes, Codex, Copilot, and Claude Code.
+
 ### 5.1 Profiles
 
-| Profile            | Default when                          |
-| ------------------ | ------------------------------------- |
-| `library`          | CLI, package, helper                  |
-| `service`          | backend / API-only                    |
-| `web-application`  | anything with a web UI                |
-| `monorepo`         | multi-package                         |
-| `regulated-system` | FDA/ISO/certification or compliance-bound |
+Profiles are lean-first: the default minimum is a small core cheap to maintain;
+heavier documents are opt-in (or required only for deployed/compliance
+profiles).
+
+| Profile            | Default when                          | Required beyond core                          |
+| ------------------ | ------------------------------------- | --------------------------------------------- |
+| `library`          | CLI, package, helper                  | —                                            |
+| `service`          | backend / API-only                    | CONTRIBUTING, SECURITY, OPERATIONS, THREAT_MODEL, ARCHITECTURE, TESTING, ≥1 ADR |
+| `web-application`  | anything with a web UI you deploy     | same as service (plus `.env.example`)        |
+| `monorepo`         | multi-package                         | same as service (+ nested `AGENTS.md`/pkg)   |
+| `regulated-system` | FDA/ISO/certification or compliance-bound | same as service (+ `BASELINE.md` evidence) |
+
+OPT-IN everywhere (never required): `docs/FEATURES.md`, `docs/DESIGN.md`,
+`docs/GLOSSARY.md`, `docs/decisions/` (for `library`), `docs/plans/active/` +
+`completed/`. Present only when the project genuinely wants them. The core does
+not demand `CLAUDE.md`: `AGENTS.md` is the single canonical control file — no
+shim.
 
 ## 6. Requirements framing
 
@@ -158,11 +173,12 @@ The validator reads these fields; every read field MUST be documented here.
 
 ## 11. Control plane
 
-Changes to the control plane — `AGENTS.md`, `CLAUDE.md`, `project.yaml`,
+Changes to the control plane — `AGENTS.md`, `project.yaml`,
 `docs/BOUNDARIES.md`, threatened precepts in `SPEC.md`, `.agents/`, GitHub
 workflows, secrets — are "control-plane changes" requiring explicit human
 review; an AI reviewer alone is not sufficient. Rationale: a careless or
 malicious change can modify the very instructions an agent trusts.
+`AGENTS.md` is the single canonical control file; no `CLAUDE.md` shim exists.
 
 ## 12. Non-goals
 

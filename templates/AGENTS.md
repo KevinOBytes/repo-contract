@@ -7,12 +7,19 @@ plainly whether it is a research prototype / internal tool / shipped product.}
 
 ## Authority and reading order
 
+Core documents (present in every project):
+
 1. `docs/BOUNDARIES.md` defines hard constraints — never cross them.
 2. `docs/REQUIREMENTS.md` defines required behavior.
-3. `docs/decisions/` contains accepted technical decisions (ADRs).
-4. `docs/ARCHITECTURE.md` describes the current (as-built) implementation.
-5. `docs/DESIGN.md` defines product and interaction behavior.
-6. `TODO.md` is informational and never overrides the documents above.
+3. `TODO.md` is informational and never overrides the documents above.
+
+Expanded documents (present when this project needs them, per `docs/INDEX.md`):
+
+- `docs/decisions/*.md` — accepted technical decisions (ADRs).
+- `docs/ARCHITECTURE.md` — as-built implementation.
+- `docs/DESIGN.md` — product and interaction behavior.
+- `docs/FEATURES.md` — capability index.
+- `docs/TESTING.md` / `docs/OPERATIONS.md` / `docs/THREAT_MODEL.md`.
 
 Read `docs/INDEX.md` first for the mapping of question → document. Keep this
 AGENTS.md a lean router: authority ordering, hard rules, workflow, commands.
@@ -36,7 +43,6 @@ burns the context budget on every task.
 
 - Never weaken an invariant in `docs/BOUNDARIES.md` merely to make a test pass.
 - Never introduce a production dependency without documenting the reason.
-- Never modify generated files directly.
 - Never expose secrets, credentials, tokens, or customer data in logs.
 - Never claim completion unless the required validation commands pass.
 
@@ -52,3 +58,9 @@ burns the context budget on every task.
 
 A change is complete only when implementation, tests, documentation, migration
 behavior, and rollback implications are addressed.
+
+## Agent compatibility
+
+`AGENTS.md` is the single canonical control file. Hermes, Codex, GitHub Copilot,
+and Claude Code read it directly — no `CLAUDE.md` shim is maintained or
+generated. If an agent tool complains it cannot see this file, point it here.

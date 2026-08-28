@@ -58,7 +58,6 @@ plan_required:
 
 protected_control_plane:
   - AGENTS.md
-  - CLAUDE.md
   - project.yaml
   - docs/BOUNDARIES.md
   - docs/THREAT_MODEL.md

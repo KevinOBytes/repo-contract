@@ -47,7 +47,6 @@ GOOD_FEATURES = """\
 
 COMMON_DOCS = {
     "README.md": "# Demo\n\nA real project body with enough words to be non-trivial.\n\n## Quickstart\nrun it.\n",
-    "CLAUDE.md": "@AGENTS.md\n",
     "TODO.md": "# Active Work\n\n## Ready\n- [ ] first task\n\nsome body text exceeds trivial threshold comfortably here\n",
     "CONTRIBUTING.md": "# Contributing\n\nGuidance for contributors on how to work in this repo. Enough text to count.\n",
     "SECURITY.md": "# Security\n\nReporting policy text is here and is long enough to be non-trivial.\n",
@@ -129,6 +128,32 @@ def test_feature_reference_to_req_not_flagged_as_dup(tmp_path):
     r = run_validator(root, "library")
     assert r.returncode == 0
     assert "duplicate" not in r.stdout
+
+
+def test_lean_library_without_heavy_docs_passes(tmp_path):
+    """A minimal library project — core files only, no CLAUDE.md, no FEATURES/
+    DESIGN/ARCHITECTURE/OPERATIONS/THREAT_MODEL/ADR — must pass. This is the
+    whole point of lean-first: don't demand docs the project doesn't need."""
+    root = tmp_path / "proj"
+    root.mkdir()
+    (root / ".gitignore").write_text(".env\n")
+    (root / "AGENTS.md").write_text(MINIMAL_AGENTS)
+    (root / "project.yaml").write_text(
+        "schema_version: 1\nprofile: library\nname: demo\ndescription: demo project.\n"
+    )
+    (root / "README.md").write_text(
+        "# Demo\n\nA real project body with enough words to be non-trivial.\n\nQuickstart.\n"
+    )
+    (root / "TODO.md").write_text("# Active Work\n\n## Ready\n- [ ] first task\n\nmore body text here.\n")
+    (root / "docs").mkdir()
+    (root / "docs" / "INDEX.md").write_text("# Index\n\n| Q | Doc |\n| --- | --- |\n| What | ../README.md |\n")
+    (root / "docs" / "REQUIREMENTS.md").write_text(GOOD_REQ)
+    (root / "docs" / "BOUNDARIES.md").write_text(
+        "# Boundaries\n\n- BOUNDARY-AUTH-001: auth checks are server-side only.\n- More invariant text.\n"
+    )
+    r = run_validator(root, "library")
+    assert r.returncode == 0, (r.returncode, r.stdout + r.stderr)
+    assert "CLAUDE" not in r.stdout
 
 
 def test_fail_on_committed_secret_env(tmp_path):

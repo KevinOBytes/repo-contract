@@ -32,10 +32,11 @@ for the standard it ships. This is the highest-authority file agents read.
   validator without documenting the reason and updating SPEC §10.
 
 ## Control-plane boundaries
-- BOUNDARY-CTL-001: `AGENTS.md`, `CLAUDE.md`, `project.yaml`,
+- BOUNDARY-CTL-001: `AGENTS.md`, `project.yaml`,
   `docs/BOUNDARIES.md`, `docs/SPEC.md`, `templates/**`, and `.github/**` are
   control-plane paths; changes require explicit human review, not an AI
-  reviewer alone.
+  reviewer alone. `AGENTS.md` is the single canonical control file — no
+  `CLAUDE.md` shim.
 
 ## Consistency boundaries
 - BOUNDARY-CONS-001: `templates/` and `scripts/validate.py` must remain

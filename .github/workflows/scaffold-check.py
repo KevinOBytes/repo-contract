@@ -61,8 +61,6 @@ def main() -> int:
 
         if not (root / ".gitignore").exists():
             (root / ".gitignore").write_text(".env\n")
-        if not (root / "CLAUDE.md").exists():
-            (root / "CLAUDE.md").write_text("@AGENTS.md\n")
 
         r = subprocess.run(
             [sys.executable, str(VALIDATOR), str(root), "--profile", "library"],
