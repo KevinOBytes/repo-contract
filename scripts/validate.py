@@ -9,8 +9,9 @@ Exit 0 = pass (warnings allowed), 1 = one or more failures, 2 = usage error.
 
 PROFILES ARE LEAN-FIRST. The default (`library`) minimum is a small core that is
 cheap to maintain and unlikely to rot:
-    README, AGENTS, CLAUDE, TODO, project.yaml, docs/INDEX, docs/REQUIREMENTS,
+    README, AGENTS, TODO, project.yaml, docs/INDEX, docs/REQUIREMENTS,
     docs/BOUNDARIES.
+AGENTS.md is the single canonical control file — no CLAUDE.md shim.
 Deployed profiles (service/web-application/monorepo/regulated-system) add the
 justified extras: CONTRIBUTING, SECURITY, OPERATIONS, THREAT_MODEL,
 ARCHITECTURE, TESTING, and at least one ADR. DESIGN/FEATURES/GLOSSARY and the
