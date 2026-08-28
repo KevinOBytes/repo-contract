@@ -5,9 +5,13 @@
 
 Generated: 2026-08-28
 
+## In progress
+- [x] GitHub Actions workflow (`contract-check.yml`) runs pytest + validate.py +
+      scaffold-check on push/PR — requirements: REQ-TL-001, REQ-CT-001.
+
 ## Ready
-- [ ] Add GitHub Actions workflow that runs `pytest` + `validate.py` in CI on
-      push/PR — requirements: REQ-TL-001.
+- [ ] Make the template-set generated from SPEC (single source) rather than
+      hand-maintained in sync with it — requirements: REQ-CT-001.
 
 ## Blocked
 - [ ] None.
