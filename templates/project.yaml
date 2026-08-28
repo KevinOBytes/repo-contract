@@ -1,0 +1,71 @@
+schema_version: 1
+
+profile: {profile}   # library | service | web-application | monorepo | regulated-system
+
+name: {name}
+description: {one-line description}
+
+documents:
+  agents:
+    path: AGENTS.md
+    authority: operational
+  readme:
+    path: README.md
+    authority: informational
+  requirements:
+    path: docs/REQUIREMENTS.md
+    authority: normative
+    id_prefix: REQ
+  features:
+    path: docs/FEATURES.md
+    authority: derived
+    id_prefix: FTR
+  design:
+    path: docs/DESIGN.md
+    authority: normative
+  boundaries:
+    path: docs/BOUNDARIES.md
+    authority: normative
+    id_prefix: BOUNDARY
+  architecture:
+    path: docs/ARCHITECTURE.md
+    authority: descriptive
+  todo:
+    path: TODO.md
+    authority: generated
+    source: {github-issues | local}
+
+commands:
+  bootstrap: {pending-stack OR real command}
+  check: {real command}
+  test: {real command}
+  validate: {real command}
+  project-check: python3 .agents/projectctl/validate.py .   # see note
+
+plan_required:
+  paths:
+    - db/**
+    - infra/**
+    - src/auth/**
+    - src/authorization/**
+  change_types:
+    - public-api-change
+    - database-migration
+    - authentication-change
+    - authorization-change
+    - new-external-dependency
+    - cross-package-refactor
+
+protected_control_plane:
+  - AGENTS.md
+  - CLAUDE.md
+  - project.yaml
+  - docs/BOUNDARIES.md
+  - docs/THREAT_MODEL.md
+  - .agents/**
+  - .claude/**
+
+# NOTE: project-check points at the canonical validator. During scaffold, copy
+# scripts/validate.py from the project-scaffold skill into
+# <root>/.agents/projectctl/validate.py so the contract is self-validating
+# after this skill finishes its job.
